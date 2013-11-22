@@ -4,7 +4,7 @@
 #import mysocket
 import socket
 import os
-import xml.dom.minidom import parse, parseString
+from xml.dom.minidom import parse, parseString
 import base64
 import shutil
 import os.path, time
@@ -24,7 +24,6 @@ class serveur:
  
     MAX_RECV = 1024
     
-    nomServeur = "Serveur de Vincent Dube"
     ###################################################################################################   
     def __init__(self, host, port):
         print "bob"

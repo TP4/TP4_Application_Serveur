@@ -18,7 +18,7 @@ class serveur:
  
     # Se donner un objet de la classe socket.
     un_socket = socket.socket()
-    nomServeur = "Serveur Tp1"
+    nomServeur = "Serveur Tp4"
     # Socket connexion au client.
     connexion = None
  
@@ -52,7 +52,7 @@ class serveur:
 ### Main ###
 ########################################################################################
 if __name__ == '__main__':
-    serv = serveur('', 50025)
+    serv = serveur('162.209.100.18', 50025)
    
 
     

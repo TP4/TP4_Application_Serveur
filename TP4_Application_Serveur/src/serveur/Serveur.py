@@ -12,6 +12,8 @@ from time import mktime
 import time
 import datetime
 import hashlib
+import thread
+import threading
 
  
 class serveur:
@@ -20,92 +22,75 @@ class serveur:
     """
  
     # Se donner un objet de la classe socket.
-    un_socket = socket.socket()
+    aSocket = socket.socket()
     nomServeur = "Serveur Tp1"
     # Socket connexion au client.
-    connexion = None
- 
+    listActivities = ""
     MAX_RECV = 1024
     
     ###################################################################################################   
     def __init__(self, host, port):
-        print "bob"
-        self.listeActivites = []
-        self.increment = 0;
+
+        self.aSocket.bind((host, port))
+        self.aSocket.listen(2)
         #LOISIR_LIBRE
     ###################################################################################################   
-    def getListDonnees(self):
+    def getData(self):
         #dom = parse('/donnees/' + nomBaseDonnees);
         dom = parse("LOISIR_LIBRE.XML");
         return dom
     ########################################################################################   
-    def getNameActivities(self, nomBaseDonnees):
-        dom = self.getListDonnees(nomBaseDonnees)
+    def getListActivitiesForCurrentMonth(self):
+        dom = self.getData()
+        self.listActivities = "<ListActivities>"
         for node1 in dom.getElementsByTagName('LOISIR_LIBRE'):    
             valide = False
             for node2 in dom.getElementsByTagName('DATE_FIN'):
-                valide = self.verifyIfDatePassed(node2.firstChild.data)
-                date = node2.firstChild.data
-                if valide:
-                    for node3 in dom.getElementsByTagName('DESCRIPTION'):
-                        print node3.firstChild.data
-                        print date
-            if valide:
-                self.listeActivites.append(node1)
-                
-          
-    ###################################################################################################
-    def getTenFirstActivities(self):
-        domString = "<TenActivities>";
-        for x in range(self.increment, self.increment + 10):
-            domString += "<Activity>"
-            domString += self.listeActivites[x]
-            domString += "</Activity>"
-        
-        domString += "</TenActivities>"
-        dom = parseString(domString)
-        
-                  
-    ###################################################################################################
-    def getStartDate(self):
-        dom = self.getListDonnees()
-        
-        ###################################################################################################
-    def getEndDate(self):
-        dom = self.getListDonnees()
-    
-    def getAllPassedEvents(self):
-        print "bob"
-        print "bob2"
-        
-    ###################################################################################################       
-    def verifyIfDatePassed(self, dateActivite):
+                if (node2.firstChild != None):
+                    valide = self.verifyIfDatePassed(node2.firstChild.data)
+                    valide = True
+                    if valide:       
+                            self.listActivities += node1.toxml() ##To verify. I'm not sure node1.toxml() will work. -Raphael
+        self.listActivities += "</ListActivities>"    
+        self.listActivities = parseString(self.listActivities).toxml()            
+        return self.listActivities
+    ###################################################################################################   
+    def sendNewList(self, server, client, lock):
+        lock.acquire()
+        client.send(server.listActivities)
+        lock.release()
+        client.close()
+    ########################################################################################   
+    def verifyIfDatePassed(self, dateActivity):
         #dateActuelle = datetime.datetime.now()
-        partiesDate = dateActivite.split('-')
-        if int(partiesDate[0]) < 2013:
+        activityDateSplited = dateActivity.split('-')
+        if int(activityDateSplited[0]) < 2013:
             return False
         else:
             dateActuelle = time.time()
-            date = time.strptime(dateActivite, '%Y-%m-%d')
-            dateDonnee = time.mktime(date)
-            if dateDonnee > dateActuelle:
-                return True
+            date = time.strptime(dateActivity, '%Y-%m-%d')
+            dateFromData = time.mktime(date)
+            if dateFromData > dateActuelle:
+                dateActualMonth = datetime.date.month
+                dateActivityMonth = datetime.datetime.strptime(dateActivity, '%Y-%m-%d')
+                if (dateActualMonth == dateActivityMonth.month):
+                    return True
+                else:
+                    return False
             else:
                 return False
-
-            
-    
-    ###################################################################################################   
-
 
 ########################################################################################
 ### Main ###
 ########################################################################################
 if __name__ == '__main__':
-    serv = serveur('', 50025)
+    serv = serveur('localhost', 50025)
+    semaphoreDomUtilise = threading.Lock()
+    while True:
+        client, clientAdress = serv.aSocket.accept()
+        thread = threading.Thread(target=serv.sendNewList)
+        
     
-    serv.getNameActivities()
-   
 
     
             

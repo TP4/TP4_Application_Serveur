@@ -30,39 +30,54 @@ class serveur:
     
     ###################################################################################################   
     def __init__(self, host, port):
-
+        print "niaaaa1"
         self.aSocket.bind((host, port))
         self.aSocket.listen(2)
+        print "niaaaaa2"
         #LOISIR_LIBRE
     ###################################################################################################   
     def getData(self):
         #dom = parse('/donnees/' + nomBaseDonnees);
+        print "sa commence !"
         dom = parse("LOISIR_LIBRE.XML");
+        print "caliss"
         return dom
     ########################################################################################   
     def getListActivitiesForCurrentMonth(self):
         dom = self.getData()
         self.listActivities = "<ListActivities>"
-        for node1 in dom.getElementsByTagName('LOISIR_LIBRE'):    
-            valide = False
-            for node2 in dom.getElementsByTagName('DATE_FIN'):
-                if (node2.firstChild != None):
-                    valide = self.verifyIfDatePassed(node2.firstChild.data)
-                    valide = True
-                    if valide:       
-                            self.listActivities += node1.toxml() ##To verify. I'm not sure node1.toxml() will work. -Raphael
+        i = 0
+        print 'A'
+        for node1 in dom.getElementsByTagName('ns1:LOISIRS_LIBRES'):
+            for node2 in node1.getElementsByTagName('LOISIR_LIBRE'):    
+                valide = False
+                print 'B'
+                for node3 in node2.getElementsByTagName('DATE_FIN'):
+                    print 'C'
+                    if (node3.firstChild != None):
+                        valide = self.verifyIfDatePassed(node3.firstChild.data)
+                        if valide:
+                            print 'yeah'
+                            self.listActivities += node2.text() ##To verify. I'm not sure node1.toxml() will work. -Raphael
+
         self.listActivities += "</ListActivities>"    
-        self.listActivities = parseString(self.listActivities).toxml()            
-        return self.listActivities
+        print self.listActivities
+        self.listActivities = parseString(self.listActivities)            
+        return self.listActivities.toxml()
+        
     ###################################################################################################   
     def sendNewList(self, server, client, lock):
+        entree = client.recv(1024)
+        print entree
+        print "magiiie"
         lock.acquire()
-        client.send(server.listActivities)
+        client.send(server.getListActivitiesForCurrentMonth())
         lock.release()
         client.close()
     ########################################################################################   
     def verifyIfDatePassed(self, dateActivity):
         #dateActuelle = datetime.datetime.now()
+        print dateActivity
         activityDateSplited = dateActivity.split('-')
         if int(activityDateSplited[0]) < 2013:
             return False
@@ -71,9 +86,9 @@ class serveur:
             date = time.strptime(dateActivity, '%Y-%m-%d')
             dateFromData = time.mktime(date)
             if dateFromData > dateActuelle:
-                dateActualMonth = datetime.date.month
-                dateActivityMonth = datetime.datetime.strptime(dateActivity, '%Y-%m-%d')
-                if (dateActualMonth == dateActivityMonth.month):
+                dateActual = (datetime.date.today())
+                dateActivity = datetime.datetime.strptime(dateActivity, '%Y-%m-%d')
+                if (dateActual.month == dateActivity.month):
                     return True
                 else:
                     return False
@@ -87,8 +102,12 @@ if __name__ == '__main__':
     serv = serveur('localhost', 50025)
     semaphoreDomUtilise = threading.Lock()
     while True:
+        print "1"
         client, clientAdress = serv.aSocket.accept()
-        thread = threading.Thread(target=serv.sendNewList)
+        print "2"
+        thread = threading.Thread(target=serv.sendNewList, args=(serv, client, semaphoreDomUtilise))
+        thread.start()
+        print "3"
         
     
 

@@ -14,6 +14,7 @@ import datetime
 import hashlib
 import thread
 import threading
+import re
 
  
 class serveur:
@@ -46,7 +47,6 @@ class serveur:
     def getListActivitiesForCurrentMonth(self):
         dom = self.getData()
         self.listActivities = "<ListActivities>"
-        i = 0
         print 'A'
         for node1 in dom.getElementsByTagName('ns1:LOISIRS_LIBRES'):
             for node2 in node1.getElementsByTagName('LOISIR_LIBRE'):    
@@ -57,27 +57,67 @@ class serveur:
                     if (node3.firstChild != None):
                         valide = self.verifyIfDatePassed(node3.firstChild.data)
                         if valide:
-                            print 'yeah'
-                            self.listActivities += node2.text() ##To verify. I'm not sure node1.toxml() will work. -Raphael
+                            self.listActivities += "<Activite>"
+                            self.listActivities += "<DATE_FIN>" + node3.firstChild.data + "</DATE_FIN>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('DATE_DEB'):
+                                if node4.firstChild != None:
+                                    text = self.correctText(node4.firstChild.data)
+                                    self.listActivities += "<DATE_DEB>" + text + "</DATE_DEB>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('DESCRIPTION'):
+                                if node4.firstChild != None:
+                                     text = self.correctText(node4.firstChild.data)
+                                     self.listActivities += "<DESCRIPTION>" + text + "</DESCRIPTION>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('NOM_COUR'):
+                                if node4.firstChild != None:
+                                     text = self.correctText(node4.firstChild.data)
+                                     self.listActivities += "<NOM_COUR>" + text + "</NOM_COUR>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('LIEU_1'):
+                                if node4.firstChild != None:
+                                     text = self.correctText(node4.firstChild.data)
+                                     self.listActivities += "<LIEU_1>" + text + "</LIEU_1>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('ADRESSE'):
+                                if node4.firstChild != None:
+                                     text = self.correctText(node4.firstChild.data)
+                                     self.listActivities += "<ADRESSE>" + text + "</ADRESSE>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('HEURE_FIN'):
+                                if node4.firstChild != None:
+                                     text = self.correctText(node4.firstChild.data)
+                                     self.listActivities += "<HEURE_FIN>" + text + "</HEURE_FIN>"
+                            #------------------------------------------------------------------------------------
+                            for node4 in node2.getElementsByTagName('HEURE_DEBUT'):
+                                if node4.firstChild != None:
+                                     text = self.correctText(node4.firstChild.data)
+                                     self.listActivities += "<HEURE_DEBUT>" + text + "</HEURE_DEBUT>"
+                            #------------------------------------------------------------------------------------
+                            self.listActivities += "</Activite>"
+                            print self.listActivities + '\n'
 
-        self.listActivities += "</ListActivities>"    
+        self.listActivities += "</ListActivities>"  
         print self.listActivities
-        self.listActivities = parseString(self.listActivities)            
-        return self.listActivities.toxml()
-        
+        dom = parseString(self.listActivities)            
+        return dom.toxml()
+    
+    def correctText(self, text):
+        text = text.replace('\'', '').replace('è', '').replace('É', '').replace('é','')
+        return text
     ###################################################################################################   
     def sendNewList(self, server, client, lock):
         entree = client.recv(1024)
         print entree
         print "magiiie"
         lock.acquire()
-        client.send(server.getListActivitiesForCurrentMonth())
+        server.getListActivitiesForCurrentMonth()
         lock.release()
         client.close()
     ########################################################################################   
     def verifyIfDatePassed(self, dateActivity):
         #dateActuelle = datetime.datetime.now()
-        print dateActivity
         activityDateSplited = dateActivity.split('-')
         if int(activityDateSplited[0]) < 2013:
             return False
@@ -99,15 +139,16 @@ class serveur:
 ### Main ###
 ########################################################################################
 if __name__ == '__main__':
-    serv = serveur('localhost', 50025)
+    serv = serveur('localhost', 50000)
     semaphoreDomUtilise = threading.Lock()
     while True:
-        print "1"
-        client, clientAdress = serv.aSocket.accept()
-        print "2"
-        thread = threading.Thread(target=serv.sendNewList, args=(serv, client, semaphoreDomUtilise))
-        thread.start()
-        print "3"
+       xml = serv.getListActivitiesForCurrentMonth()
+        #print "1"
+       # client, clientAdress = serv.aSocket.accept()
+       # print "2"
+       # thread = threading.Thread(target=serv.sendNewList, args=(serv, client, semaphoreDomUtilise))
+       # thread.start()
+       # print "3"
         
     
 

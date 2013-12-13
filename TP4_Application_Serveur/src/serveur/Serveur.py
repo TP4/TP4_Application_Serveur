@@ -24,6 +24,7 @@ class serveur:
  
     # Se donner un objet de la classe socket.
     aSocket = socket.socket()
+    connexion = socket.socket()
     nomServeur = "Serveur Tp1"
     # Socket connexion au client.
     listActivities = ""
@@ -31,17 +32,12 @@ class serveur:
     
     ###################################################################################################   
     def __init__(self, host, port):
-        print "niaaaa1"
         self.aSocket.bind((host, port))
-        self.aSocket.listen(2)
-        print "niaaaaa2"
         #LOISIR_LIBRE
     ###################################################################################################   
     def getData(self):
         #dom = parse('/donnees/' + nomBaseDonnees);
-        print "sa commence !"
         dom = parse("LOISIR_LIBRE.XML");
-        print "caliss"
         return dom
     ########################################################################################   
     def getListActivitiesForCurrentMonth(self):
@@ -108,11 +104,10 @@ class serveur:
         return text
     ###################################################################################################   
     def sendNewList(self, server, client, lock):
-        entree = client.recv(1024)
-        print entree
-        print "magiiie"
+        #entree = client.recv(1024)
+
         lock.acquire()
-        server.getListActivitiesForCurrentMonth()
+        self.connexion.send(server.getListActivitiesForCurrentMonth())
         lock.release()
         client.close()
     ########################################################################################   
@@ -139,18 +134,14 @@ class serveur:
 ### Main ###
 ########################################################################################
 if __name__ == '__main__':
-    serv = serveur('localhost', 50000)
+    serv = serveur('localhost', 50025)
     semaphoreDomUtilise = threading.Lock()
     while True:
-       xml = serv.getListActivitiesForCurrentMonth()
-        #print "1"
-       # client, clientAdress = serv.aSocket.accept()
-       # print "2"
-       # thread = threading.Thread(target=serv.sendNewList, args=(serv, client, semaphoreDomUtilise))
-       # thread.start()
-       # print "3"
+        serv.aSocket.listen(2)
+        client, clientAdress = serv.aSocket.accept()
+        serv.connexion = client
+        thread = threading.Thread(target=serv.sendNewList, args=(serv, client, semaphoreDomUtilise))
+        thread.start()
         
-    
 
-    
             

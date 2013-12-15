@@ -15,6 +15,7 @@ import hashlib
 import thread
 import threading
 import re
+import unicodedata
 
  
 class serveur:
@@ -24,10 +25,10 @@ class serveur:
  
     # Se donner un objet de la classe socket.
     aSocket = socket.socket()
-    connexion = socket.socket()
     nomServeur = "Serveur Tp1"
     # Socket connexion au client.
     listActivities = ""
+    requeteXML = None
     MAX_RECV = 1024
     
     ###################################################################################################   
@@ -43,13 +44,10 @@ class serveur:
     def getListActivitiesForCurrentMonth(self):
         dom = self.getData()
         self.listActivities = "<ListActivities>"
-        print 'A'
         for node1 in dom.getElementsByTagName('ns1:LOISIRS_LIBRES'):
             for node2 in node1.getElementsByTagName('LOISIR_LIBRE'):    
                 valide = False
-                print 'B'
                 for node3 in node2.getElementsByTagName('DATE_FIN'):
-                    print 'C'
                     if (node3.firstChild != None):
                         valide = self.verifyIfDatePassed(node3.firstChild.data)
                         if valide:
@@ -92,25 +90,40 @@ class serveur:
                                      self.listActivities += "<HEURE_DEBUT>" + text + "</HEURE_DEBUT>"
                             #------------------------------------------------------------------------------------
                             self.listActivities += "</Activite>"
-                            print self.listActivities + '\n'
 
         self.listActivities += "</ListActivities>"  
         print self.listActivities
         dom = parseString(self.listActivities)            
         return dom.toxml()
-    
-    def correctText(self, text):
-        text = text.replace('\'', '').replace('�', '').replace('�', '').replace('�','')
-        return text
-    ###################################################################################################   
-    def sendNewList(self, server, client, lock):
-        #entree = client.recv(1024)
 
-        lock.acquire()
-        self.connexion.send(server.getListActivitiesForCurrentMonth())
-        lock.release()
-        client.close()
-    ########################################################################################   
+    def correctText(self, text):
+        #unicodedata.normalize('NFD', text).encode('ascii', 'ignore')
+        text = text.replace(u"\'", "").replace(u"è", "e").replace(u"É", "E").replace(u"é","e").replace(u"â","a").replace(u"î", "i").replace(u"«", "").replace(u"»",'').replace(u"À", "A").replace(u"ô","o")
+        return text
+
+    ###################################################################################################   
+    def updateList(self, server, semaphore):
+        while True:
+            semaphore.acquire()
+            semaphore.acquire()
+            semaphore.acquire()
+            semaphore.acquire()
+        
+            
+            self.requeteXML = self.getListActivitiesForCurrentMonth()
+        
+            semaphore.release()
+            semaphore.release()
+            semaphore.release()
+            semaphore.release()
+            self.waitBeforeUpdate()
+    ########################################################################################
+    def waitBeforeUpdate(self):
+        #La mise à jour se feront à 00h01 du matin
+        heureActuelle = datetime.datetime.now()
+        timeToSleep = ((24 - (heureActuelle.hour + 1))*3600)+((60 - heureActuelle.minute)*60)+(60 - heureActuelle.second) + 60
+        time.sleep(timeToSleep)
+        
     def verifyIfDatePassed(self, dateActivity):
         #dateActuelle = datetime.datetime.now()
         activityDateSplited = dateActivity.split('-')
@@ -129,19 +142,28 @@ class serveur:
                     return False
             else:
                 return False
-
+    def getList(self, server, client, semaphoreDomUtilise):
+        semaphoreDomUtilise.acquire()
+        print "Send xml"
+        client.send(self.requeteXML)
+        semaphoreDomUtilise.release()
+        client.close()
 ########################################################################################
 ### Main ###
 ########################################################################################
 if __name__ == '__main__':
     serv = serveur('localhost', 50025)
-    semaphoreDomUtilise = threading.Lock()
+    #4 clients au maximum pourront demander une requête en même temps
+    semaphoreDomUtilise = threading.Semaphore(4)
+    #On crée un Thread qui d'occupera de créer la requête XML correspondante à la journée et s'occupera ainsi
+    #de mettre à jour la requête xml à tout les jours
+    threadGenerationXML = threading.Thread(target=serv.updateList, args=(serv, semaphoreDomUtilise))
+    threadGenerationXML.start()
+    
     while True:
         serv.aSocket.listen(2)
         client, clientAdress = serv.aSocket.accept()
-        serv.connexion = client
-        thread = threading.Thread(target=serv.sendNewList, args=(serv, client, semaphoreDomUtilise))
+        thread = threading.Thread(target=serv.getList, args=(serv, client, semaphoreDomUtilise))
         thread.start()
         
-
-            
+        

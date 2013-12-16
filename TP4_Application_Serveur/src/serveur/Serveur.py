@@ -92,7 +92,6 @@ class serveur:
                             self.listActivities += "</Activite>"
 
         self.listActivities += "</ListActivities>"  
-        print self.listActivities
         dom = parseString(self.listActivities)            
         return dom.toxml()
 
@@ -108,10 +107,11 @@ class serveur:
             semaphore.acquire()
             semaphore.acquire()
             semaphore.acquire()
-        
-            
+	    startUpdateTime = time.asctime(time.localtime(time.time()))
+            print startUpdateTime , " - Debut de l'update de la liste des activitees"   , "\n" 
             self.requeteXML = self.getListActivitiesForCurrentMonth()
-        
+            endUpdateTime = time.asctime(time.localtime(time.time()))
+            print endUpdateTime , " - Fin de l'update de la liste des activitees" , "\n"
             semaphore.release()
             semaphore.release()
             semaphore.release()
@@ -142,28 +142,34 @@ class serveur:
                     return False
             else:
                 return False
-    def getList(self, server, client, semaphoreDomUtilise):
+    def getList(self, server, client, nbClient, semaphoreDomUtilise):
         semaphoreDomUtilise.acquire()
-        print "Send xml"
+	startSendingTime = time.asctime(time.localtime(time.time()))
+	print startSendingTime , " - Envoie de la liste au client(", nbClient, ")", "\n"
         client.send(self.requeteXML)
         semaphoreDomUtilise.release()
+	endSendingTime = time.asctime(time.localtime(time.time()))
+	print endSendingTime, " - Fermeture du client (" , nbClient, ")", "\n"
         client.close()
 ########################################################################################
 ### Main ###
 ########################################################################################
 if __name__ == '__main__':
-    serv = serveur('localhost', 50025)
+    serv = serveur('162.209.100.18', 50035)
     #4 clients au maximum pourront demander une requête en même temps
     semaphoreDomUtilise = threading.Semaphore(4)
     #On crée un Thread qui d'occupera de créer la requête XML correspondante à la journée et s'occupera ainsi
     #de mettre à jour la requête xml à tout les jours
     threadGenerationXML = threading.Thread(target=serv.updateList, args=(serv, semaphoreDomUtilise))
     threadGenerationXML.start()
-    
+    nbClientThisSession = 0
     while True:
         serv.aSocket.listen(2)
-        client, clientAdress = serv.aSocket.accept()
-        thread = threading.Thread(target=serv.getList, args=(serv, client, semaphoreDomUtilise))
+        client, clientAddress = serv.aSocket.accept()
+	connectionTime = time.asctime(time.localtime(time.time()))
+        nbClientThisSession = nbClientThisSession + 1
+	print connectionTime, " - Connextion recu de : ", clientAddress , "(", nbClientThisSession, ")", "\n"
+        thread = threading.Thread(target=serv.getList, args=(serv, client, nbClientThisSession, semaphoreDomUtilise))
         thread.start()
         
         

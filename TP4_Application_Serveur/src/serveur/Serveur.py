@@ -104,18 +104,18 @@ class serveur:
     def updateList(self, server, semaphore):
         while True:
             semaphore.acquire()
-            semaphore.acquire()
-            semaphore.acquire()
-            semaphore.acquire()
+           # semaphore.acquire()
+           # semaphore.acquire()
+           # semaphore.acquire()
 	    startUpdateTime = time.asctime(time.localtime(time.time()))
             print startUpdateTime , " - Debut de l'update de la liste des activitees"   , "\n" 
             self.requeteXML = self.getListActivitiesForCurrentMonth()
             endUpdateTime = time.asctime(time.localtime(time.time()))
             print endUpdateTime , " - Fin de l'update de la liste des activitees" , "\n"
             semaphore.release()
-            semaphore.release()
-            semaphore.release()
-            semaphore.release()
+           # semaphore.release()
+           # semaphore.release()
+           # semaphore.release()
             self.waitBeforeUpdate()
     ########################################################################################
     def waitBeforeUpdate(self):
@@ -157,7 +157,7 @@ class serveur:
 if __name__ == '__main__':
     serv = serveur('162.209.100.18', 50035)
     #4 clients au maximum pourront demander une requête en même temps
-    semaphoreDomUtilise = threading.Semaphore(4)
+    semaphoreDomUtilise = threading.Semaphore()
     #On crée un Thread qui d'occupera de créer la requête XML correspondante à la journée et s'occupera ainsi
     #de mettre à jour la requête xml à tout les jours
     threadGenerationXML = threading.Thread(target=serv.updateList, args=(serv, semaphoreDomUtilise))
